@@ -482,6 +482,7 @@ func (c *Controller) Process(ctx context.Context) {
 func hasIngressChanged(old, new *extensionsV1beta1.Ingress, ignoredAnnotations []string) bool {
 	for _, annotation := range ignoredAnnotations {
 		delete(old.Annotations, annotation)
+		delete(new.Annotations, annotation)
 	}
 
 	if new.Namespace != old.Namespace {
