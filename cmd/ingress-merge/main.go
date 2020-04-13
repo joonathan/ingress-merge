@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/golang/glog"
-	"github.com/jakubkulhan/ingress-merge"
+	"github.com/joonathan/ingress-merge"
 	"github.com/spf13/cobra"
 )
 
@@ -48,6 +48,10 @@ func main() {
 			}
 
 			if controller.ConfigMapWatchIgnore, err = cmd.Flags().GetStringArray("configmap-watch-ignore"); err != nil {
+				return err
+			}
+
+			if controller.AnnotationsToIgnore, err = cmd.Flags().GetStringSlice("annotations-to-ignore"); err != nil {
 				return err
 			}
 
@@ -110,6 +114,12 @@ func main() {
 		"configmap-watch-ignore",
 		[]string{},
 		"Ignore configmap resources with matching annotations (can be specified multiple times).",
+	)
+
+	rootCmd.Flags().StringSlice(
+		"annotations-to-ignore",
+		[]string{},
+		"Ignore specified annotation fields when comparing Ingress for changes.",
 	)
 
 	if err := rootCmd.Execute(); err != nil {

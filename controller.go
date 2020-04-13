@@ -43,6 +43,7 @@ type Controller struct {
 	ConfigMapSelector    string
 	IngressWatchIgnore   []string
 	ConfigMapWatchIgnore []string
+	AnnotationsToIgnore  []string
 
 	client             *kubernetes.Clientset
 	ingressesIndex     cache.Indexer
@@ -137,6 +138,10 @@ func (c *Controller) Run(ctx context.Context) (err error) {
 
 	if len(c.ConfigMapWatchIgnore) > 0 {
 		glog.Infof("Ignoring ConfigMap objects with the following annotations: %v", c.ConfigMapWatchIgnore)
+	}
+
+	if len(c.AnnotationsToIgnore) > 0 {
+		glog.Infof("Ignoring following annotations on Ingress: %v", c.AnnotationsToIgnore)
 	}
 
 	c.wakeCh = make(chan struct{}, 1)
@@ -402,7 +407,7 @@ func (c *Controller) Process(ctx context.Context) {
 		if existingMergedIngressIface, exists, _ := c.ingressesIndex.Get(mergedIngres); exists {
 			existingMergedIngress := existingMergedIngressIface.(*extensionsV1beta1.Ingress)
 
-			if hasIngressChanged(existingMergedIngress, mergedIngres) {
+			if hasIngressChanged(existingMergedIngress, mergedIngres, c.AnnotationsToIgnore) {
 				changed = true
 				ret, err := c.client.ExtensionsV1beta1().Ingresses(mergedIngres.Namespace).Update(mergedIngres)
 				if err != nil {
@@ -474,7 +479,11 @@ func (c *Controller) Process(ctx context.Context) {
 	}
 }
 
-func hasIngressChanged(old, new *extensionsV1beta1.Ingress) bool {
+func hasIngressChanged(old, new *extensionsV1beta1.Ingress, ignoredAnnotations []string) bool {
+	for _, annotation := range ignoredAnnotations {
+		delete(old.Annotations, annotation)
+	}
+
 	if new.Namespace != old.Namespace {
 		return true
 	}
